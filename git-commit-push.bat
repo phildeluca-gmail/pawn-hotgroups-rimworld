@@ -4,7 +4,7 @@
 :: Stage, commit, and push this repository.
 :: Double-click to run.
 ::
-:: Repo: https://github.com/phildeluca-gmail/pawn-hotgroups
+:: Repo: https://github.com/phildeluca-gmail/pawn-hotgroups-rimworld
 ::
 :: Based on git-commit-generic.bat from the Do Not Be Lazy repo, with
 :: one addition: it pulls (rebase) before pushing, so a change made on
