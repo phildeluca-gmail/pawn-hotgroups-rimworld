@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <packageId>phildeluca.pawnhotgroups</packageId>
+  <name>Ketjak's Pawn Hotgroups</name>
+  <author>Ketjak</author>
+  <supportedVersions>
+    <li>1.5</li>
+  </supportedVersions>
+  <description>Ten named, saved groups of pawns. Press a key and everyone in that group who is standing on this map joins your selection.
+
+Ctrl and a number key, 1 to 9 and 0 for group 10, makes that group out of whoever you have selected right now. It replaces whatever the group held before - there is no merge and no confirmation. Naming the group is done in the hotgroups window on the bottom bar; remaking a group from a different selection does not change its name.
+
+Alt and the same number adds that group's members to your selection. It does not clear what you already had selected, so two groups can be picked up one after the other. Anyone who is not on the map you pressed the key on stays unselected and you get a message saying where they are instead - another map by name, a caravan by name, or just off the map.
+
+A pawn can be in as many groups as you like. A pawn who dies, is banished, is sold, or otherwise stops taking your orders drops out of every group the next time you use it, and says so once.
+
+There is one setting, off by default: let the plain number keys select a group with no modifier held. Leave it off unless you do not use 1 to 4 for game speed, because those four keys are the speed controls.
+
+The groups are stored in the save file, so they are the same on every map of that colony. Safe to add to an ongoing game. Removing the mod leaves the stored groups behind as harmless unresolved data.</description>
+  <!-- No modDependencies, and that is deliberate rather than an oversight.
+       This mod has ZERO Harmony patches - a GameComponent gives us both
+       GameComponentOnGUI and ExposeData, and MainButtonDef gives us the
+       bottom-row button, so there is nothing left to patch. See
+       phg-architecture.md section 3.4 at umbrella level. Adding a patch
+       later means adding the brrainz.harmony block here in the same change;
+       copy it from DoNotBeLazy/About/About.xml.
+
+       Documents live in the umbrella folder prefixed phg-, never here.
+       CLAUDE.md forbids a README or a CLAUDE.md in a mod folder. -->
+</ModMetaData>

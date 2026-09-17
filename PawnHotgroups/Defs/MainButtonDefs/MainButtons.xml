@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- order 85 sits between History (80) and Factions (90), so it lands
+       among the other minimized icon buttons instead of shoving a labelled
+       one along the bar.
+
+       validWithoutMap is deliberately ABSENT. The button is hidden on the
+       world view, where the mod can do nothing anyway - selecting is a map
+       thing and HotgroupManager bails on a null CurrentMap.
+
+       tabWindowClass needs the full type name. Vanilla gets away with the
+       bare one because the loader searches the game's own namespaces. -->
+  <MainButtonDef>
+    <defName>PawnHotgroups</defName>
+    <label>hotgroups</label>
+    <description>Name and review your pawn hotgroups.</description>
+    <tabWindowClass>PawnHotgroups.UI.MainTabWindow_Hotgroups</tabWindowClass>
+    <order>85</order>
+    <minimized>True</minimized>
+    <iconPath>UI/Buttons/MainButtons/PawnHotgroups</iconPath>
+  </MainButtonDef>
+
+</Defs>

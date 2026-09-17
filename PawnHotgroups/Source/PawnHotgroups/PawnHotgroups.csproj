@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>PawnHotgroups</AssemblyName>
+    <RootNamespace>PawnHotgroups</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>../../Assemblies/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 0Harmony is referenced but NOTHING in this mod patches anything -
+         architecture 3.4. It is here because every csproj in the project
+         carries it and dropping it would make this the odd one out; if that
+         ever looks confusing, delete the reference, not the comment. -->
+    <Reference Include="0Harmony">
+      <HintPath>../../../lib/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>../../../lib/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>../../../lib/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>../../../lib/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- UnityEngine.dll only type-forwards, so GUI, GUIUtility, Event and
+         TextAnchor are unreachable through it. The key reading and the list
+         window need all four. Same two modules Standard Cargo and Dialog
+         Improvements pull in. -->
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>../../../lib/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>../../../lib/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- ../../../lib is the umbrella's lib\ while this mod is parked there,
+       and would be the repo root's lib\ after a split-out. Same relative
+       path either way. CLAUDE.md section 2. -->
+
+</Project>
