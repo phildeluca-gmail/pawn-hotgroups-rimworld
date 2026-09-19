@@ -16,15 +16,40 @@ namespace PawnHotgroups.UI
     {
         private Vector2 scroll = Vector2.zero;
 
+        // Set by a Select button and acted on after the scroll view has closed.
+        // Activating mid-draw prunes the very list the rows below are measured
+        // from, which left the last group drawn against a height that no longer
+        // matched. -1 means nothing pending.
+        private int pendingActivate = -1;
+
         private const float RowPad = 6f;
         private const float LineHeight = 24f;
         private const float NumberWidth = 34f;
         private const float NameWidth = 180f;
         private const float SelectWidth = 90f;
+        private const float ScrollBarWidth = 20f;
+        private const float BottomPad = 12f;
 
         public override Vector2 RequestedTabSize
         {
-            get { return new Vector2(620f, 620f); }
+            // Wide enough for the two-line hint and a name plus a member's map
+            // on one line, tall enough that ten groups need only a short scroll.
+            // MainTabWindow clamps this to the screen, so asking large is safe.
+            get { return new Vector2(760f, 700f); }
+        }
+
+        // Unity clears GUIUtility.keyboardControl only when a control that does
+        // not take focus is clicked, and RimWorld never clears it at all. A name
+        // field left focused here would otherwise keep the plain-number setting
+        // dead for the rest of the session, so the window drops the keyboard on
+        // its way out.
+        public override void PreClose()
+        {
+            base.PreClose();
+            // Verse.UI in full: this file's own namespace is PawnHotgroups.UI,
+            // so the bare name resolves to that and not to the game's class.
+            Verse.UI.UnfocusCurrentControl();
+            GUIUtility.keyboardControl = 0;
         }
 
         public override void DoWindowContents(Rect inRect)
@@ -45,9 +70,15 @@ namespace PawnHotgroups.UI
             float y = 0f;
 
             Text.Font = GameFont.Small;
-            Widgets.Label(new Rect(0f, y, inRect.width, LineHeight),
-                "Ctrl + number sets a group from your selection. Alt + number adds that group to your selection.");
-            y += LineHeight + RowPad;
+
+            // The hint is longer than one line at any sensible window width, and
+            // a Label clipped to LineHeight simply cut it off mid-sentence.
+            // Text.CalcHeight is the game's own measurement for the wrapped
+            // height of a string in a given width.
+            const string hint = "Ctrl + number sets a group from your selection. Alt + number adds that group to your selection.";
+            float hintHeight = Text.CalcHeight(hint, inRect.width);
+            Widgets.Label(new Rect(0f, y, inRect.width, hintHeight), hint);
+            y += hintHeight + RowPad;
 
             // measure first so the scroll view knows how tall it is
             float contentHeight = 0f;
@@ -55,9 +86,15 @@ namespace PawnHotgroups.UI
             {
                 contentHeight += HeightOf(g);
             }
+            // the last group's divider sits at the very bottom of the content;
+            // without this it lands on the frame and the row above it reads as
+            // cut off
+            contentHeight += BottomPad;
 
             var outRect = new Rect(0f, y, inRect.width, inRect.height - y);
-            var viewRect = new Rect(0f, 0f, inRect.width - 20f, contentHeight);
+            var viewRect = new Rect(0f, 0f, inRect.width - ScrollBarWidth, contentHeight);
+
+            pendingActivate = -1;
 
             Widgets.BeginScrollView(outRect, ref scroll, viewRect, true);
 
@@ -68,6 +105,14 @@ namespace PawnHotgroups.UI
             }
 
             Widgets.EndScrollView();
+
+            // outside the scroll view, so pruning a member cannot move the rows
+            // that have already been drawn this pass
+            if (pendingActivate >= 0)
+            {
+                mgr.Activate(pendingActivate);
+                pendingActivate = -1;
+            }
         }
 
         private static float HeightOf(Hotgroup g)
@@ -102,11 +147,13 @@ namespace PawnHotgroups.UI
             Text.Anchor = TextAnchor.UpperLeft;
 
             // Does exactly what Alt + the number does, by calling the same
-            // method - the window is not a second copy of the behaviour.
+            // method - the window is not a second copy of the behaviour. The
+            // call itself waits until the scroll view has closed, because
+            // Activate prunes the list these rows were measured from.
             var button = new Rect(width - SelectWidth - 4f, y, SelectWidth, LineHeight - 2f);
             if (Widgets.ButtonText(button, "Select"))
             {
-                mgr.Activate(index);
+                pendingActivate = index;
             }
 
             y += LineHeight;

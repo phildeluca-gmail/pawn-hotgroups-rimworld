@@ -42,13 +42,26 @@ namespace PawnHotgroups.Core
         }
 
         // Architecture 2.2 - "anything to which an order can be issued".
-        // IsPlayerControlled is the game's own test and definitely exists;
-        // what it returns for a colony animal was NOT confirmed by reflection
-        // (a signature is not a body), so the animal clause is here as
-        // insurance. Harmless if IsPlayerControlled already covers them -
-        // it's an || and a pawn is only stored once either way.
         //
-        // Prisoners: no clause adds them back. A prisoner takes no orders.
+        // 2026-09-18: the body of Pawn.IsPlayerControlled was finally read off
+        // Assembly-CSharp 1.5.9214 rather than guessed at. It is
+        // IsColonistPlayerControlled || IsColonyMechPlayerControlled ||
+        // IsColonyMutantPlayerControlled, and ALL THREE of those begin with a
+        // Spawned test. So IsPlayerControlled is false for a colonist in a
+        // caravan, in a drop pod, or anywhere else off a map - and section 7's
+        // cleanup was therefore deleting every member who left the map and
+        // telling the player "X is no longer in the group". Decision 9 says an
+        // absent member is reported, not removed, so the Spawned test cannot be
+        // part of qualifying.
+        //
+        // A spawned pawn is tested exactly as architecture 2.2 writes it. An
+        // unspawned one is kept when it is still ours and still takes orders:
+        // player faction, not held by anyone (HostFaction is the captor), and
+        // not a slave. Those are the same three conditions
+        // IsColonistPlayerControlled applies once Spawned is out of the way.
+        //
+        // Prisoners: no clause adds them back. A prisoner takes no orders, and
+        // a captured pawn has a HostFaction.
         public static bool Qualifies(Pawn p)
         {
             if (p == null || p.Destroyed || p.Dead)
@@ -56,8 +69,16 @@ namespace PawnHotgroups.Core
                 return false;
             }
 
-            return p.IsPlayerControlled
-                || (p.Faction == Faction.OfPlayer && p.IsNonMutantAnimal);
+            if (p.Spawned)
+            {
+                return p.IsPlayerControlled
+                    || (p.Faction == Faction.OfPlayer && p.IsNonMutantAnimal);
+            }
+
+            // off a map - in a caravan, in a pod, being carried
+            return p.Faction == Faction.OfPlayer
+                && p.HostFaction == null
+                && !p.IsSlave;
         }
 
         // Where a pawn is, in words. Architecture section 6's table, used by

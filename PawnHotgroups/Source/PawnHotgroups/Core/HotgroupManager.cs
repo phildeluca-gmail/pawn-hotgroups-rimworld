@@ -70,16 +70,6 @@ namespace PawnHotgroups.Core
                 return;
             }
 
-            // THE guard. keyboardControl is non-zero whenever a text field has
-            // focus, and renaming a group in the list window is exactly that.
-            // Without this, typing "2" into a group's name fires hotgroup 2.
-            // Architecture 5.1 step 2 - it has its own numbered step because
-            // it is the one that gets forgotten.
-            if (GUIUtility.keyboardControl != 0)
-            {
-                return;
-            }
-
             // world view. Nothing we do means anything without a map.
             if (Find.CurrentMap == null)
             {
@@ -105,6 +95,30 @@ namespace PawnHotgroups.Core
             {
                 Activate(index);
                 e.Use();
+                return;
+            }
+
+            // THE guard - architecture 5.1 step 2, and it used to sit above
+            // everything and block all three cases.
+            //
+            // GUIUtility.keyboardControl is non-zero whenever a control holds
+            // the keyboard, and renaming a group in the list window is exactly
+            // that: without a guard, typing "2" into a group's name would fire
+            // hotgroup 2. But Unity only ever clears keyboardControl when the
+            // player clicks a control that does not take focus, and RimWorld
+            // never clears it at all - read off Assembly-CSharp 1.5.9214 on
+            // 2026-09-18: no method in the game writes GUIUtility.keyboardControl,
+            // and Verse.UI.UnfocusCurrentControl is one call to GUI.FocusControl,
+            // which does not touch it either. So one click into any text field
+            // anywhere - a hotgroup's name here, the Architect search box - left
+            // this true for the rest of the session and killed every hotgroup
+            // key until the player happened to click a plain button.
+            //
+            // Only a plain digit is text a field can swallow, so only the plain
+            // digit is guarded. Ctrl and Alt combinations are not text input and
+            // are let through above.
+            if (GUIUtility.keyboardControl != 0)
+            {
                 return;
             }
 
