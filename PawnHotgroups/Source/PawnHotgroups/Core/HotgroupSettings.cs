@@ -28,7 +28,7 @@ namespace PawnHotgroups.Core
                 "Off by default. Turning this on means 1, 2, 3 and 4 no longer change game speed - they select hotgroups 1 to 4. Ctrl and Alt keep working either way.");
 
             listing.Gap();
-            listing.Label("Ctrl + 1..9, 0 makes a hotgroup out of the current selection. Alt + the same key adds that group to the selection.");
+            listing.Label("Ctrl + 1..9, 0 makes a hotgroup out of the current selection. Alt + the same key selects it, replacing the selection. Shift + Alt + the same key adds it instead.");
 
             listing.End();
         }

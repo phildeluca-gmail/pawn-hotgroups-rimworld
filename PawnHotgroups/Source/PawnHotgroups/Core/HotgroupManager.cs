@@ -70,13 +70,24 @@ namespace PawnHotgroups.Core
                 return;
             }
 
+            int index = IndexFor(e.keyCode);
+
             // world view. Nothing we do means anything without a map.
+            // Logged only when the key actually pressed was a hotgroup
+            // digit (index >= 0) - IndexFor is a pure lookup with no side
+            // effect, so computing it here does not change what happens
+            // below, which still returns for every key when there is no
+            // map, exactly as before. A non-digit key produces no line.
             if (Find.CurrentMap == null)
             {
+                if (index >= 0)
+                {
+                    string mod = e.control ? "Ctrl+" : (e.alt ? "Alt+" : "");
+                    Logger.Info("Key: " + mod + (index + 1) + " pressed with no current map; ignored.");
+                }
                 return;
             }
 
-            int index = IndexFor(e.keyCode);
             if (index < 0)
             {
                 return;
@@ -86,6 +97,7 @@ namespace PawnHotgroups.Core
             // setting on never steals either of them.
             if (e.control)
             {
+                Logger.Info("Key: Ctrl+" + (index + 1) + " recognised - creating hotgroup " + (index + 1) + ".");
                 Create(index);
                 e.Use();
                 return;
@@ -93,7 +105,13 @@ namespace PawnHotgroups.Core
 
             if (e.alt)
             {
-                Activate(index);
+                // Shift held at the same time keeps the old additive
+                // behaviour (2026-09-20 order). e.shift is the same
+                // UnityEngine.Event field as e.control and e.alt above -
+                // verified public on UnityEngine.Event in
+                // UnityEngine.IMGUIModule.dll on 2026-09-20.
+                Logger.Info("Key: Alt+" + (index + 1) + " recognised - selecting hotgroup " + (index + 1) + ".");
+                Activate(index, e.shift);
                 e.Use();
                 return;
             }
@@ -124,7 +142,9 @@ namespace PawnHotgroups.Core
 
             if (PawnHotgroupsMod.Settings != null && PawnHotgroupsMod.Settings.plainNumberSelects)
             {
-                Activate(index);
+                // Does the same as Alt (architecture 5.1 step 6), so shift
+                // behaves the same way here too.
+                Activate(index, e.shift);
                 e.Use();
             }
 
@@ -190,9 +210,14 @@ namespace PawnHotgroups.Core
 
         // ---- selecting -------------------------------------------------
 
-        // Alt + number, and the Select button in the list window. Adds to the
-        // selection, never clears it (decision 5).
-        public void Activate(int index)
+        // Alt + number, the plain-digit setting, and the Select button in the
+        // list window. Reversed 2026-09-20: replaces the selection by
+        // default (the order that day); additive=true keeps the old
+        // behaviour and is reached only with shift held (decision 5 as
+        // rewritten). The Select button always passes false - a mouse click
+        // has no modifier in play, and replacing is the obvious default for
+        // it too.
+        public void Activate(int index, bool additive)
         {
             if (index < 0 || index >= groups.Count)
             {
@@ -201,9 +226,36 @@ namespace PawnHotgroups.Core
 
             var g = groups[index];
 
+            // Safe on its own regardless of what ExposeData did - this is
+            // the method the 2026-09-20 defect broke. A null list here
+            // means the load-path repair below did not run or was
+            // bypassed some other way; that is worth knowing about.
+            if (g.members == null)
+            {
+                g.members = new List<Pawn>();
+                Logger.Info("Activate: hotgroup " + g.Number + " had a null members list; repaired.");
+            }
+
+            int held = g.members.Count;
+            Logger.Info("Activate: hotgroup " + g.Number + " entered, holding " + held + " member" + (held == 1 ? "" : "s") + ".");
+
             // drop the dead and departed FIRST, so the player never selects a
             // corpse (architecture 5.3 step 1)
             Prune(g, true);
+
+            // Replacing clears first, even when the group turns out empty -
+            // "replace" means the selection ends up as exactly this group,
+            // including empty. One line, fired once per Activate call, never
+            // per frame.
+            if (!additive)
+            {
+                Find.Selector.ClearSelection();
+                Logger.Info("Activate: hotgroup " + g.Number + " replaced the selection.");
+            }
+            else
+            {
+                Logger.Info("Activate: hotgroup " + g.Number + " added to the selection.");
+            }
 
             if (g.members.Count == 0)
             {
@@ -213,6 +265,7 @@ namespace PawnHotgroups.Core
 
             var map = Find.CurrentMap;
             var missing = new List<Pawn>();
+            int selected = 0;
 
             foreach (var p in g.members)
             {
@@ -225,12 +278,15 @@ namespace PawnHotgroups.Core
                     {
                         Find.Selector.Select(p, false, false);
                     }
+                    selected++;
                 }
                 else
                 {
                     missing.Add(p);
                 }
             }
+
+            Logger.Info("Activate: hotgroup " + g.Number + " - " + g.members.Count + " qualified after pruning, " + selected + " selected on this map.");
 
             // Nothing selects across maps. That filter is what decision 7 asks
             // for anyway, and it is also why we never find out what
@@ -333,6 +389,7 @@ namespace PawnHotgroups.Core
             if (g.members == null)
             {
                 g.members = new List<Pawn>();
+                Logger.Info("Prune: hotgroup " + g.Number + " had a null members list; repaired.");
                 return;
             }
 
@@ -396,6 +453,23 @@ namespace PawnHotgroups.Core
                 var members = groups[i].members;
                 Scribe_Collections.Look(ref members, "members" + i, LookMode.Reference);
                 groups[i].members = members;
+
+                // Unconditional, every pass, every mode - the 2026-09-20 fix.
+                // Scribe_Collections.Look leaves the list null when there is
+                // no saved node for this group during LoadingVars, and it can
+                // do the same again during ResolvingCrossRefs even after
+                // LoadingVars had already repaired it. The old repair below
+                // ran only "if (Scribe.mode == LoadSaveMode.LoadingVars)",
+                // which a later pass could then undo with nothing to catch
+                // it - that was the hole Ctrl (Create, which never reads
+                // members) never fell into and Alt (Activate, which does)
+                // did. Checking here, right after every Look call, closes it
+                // regardless of which pass did the damage.
+                if (groups[i].members == null)
+                {
+                    groups[i].members = new List<Pawn>();
+                    Logger.Info("ExposeData: hotgroup " + groups[i].Number + " had a null members list after Scribe_Collections.Look; repaired.");
+                }
             }
 
             if (Scribe.mode == LoadSaveMode.LoadingVars)
@@ -403,10 +477,6 @@ namespace PawnHotgroups.Core
                 for (int i = 0; i < GroupCount; i++)
                 {
                     groups[i].name = (names != null && i < names.Count) ? names[i] : null;
-                    if (groups[i].members == null)
-                    {
-                        groups[i].members = new List<Pawn>();
-                    }
                 }
             }
 
@@ -424,6 +494,20 @@ namespace PawnHotgroups.Core
             // while the mod was off would otherwise open with a wall of
             // messages nobody can act on.
             PruneAll(false);
+
+            // Once per load, never per frame. Proves whether the component is
+            // alive after a load at all - the 2026-09-20 defect (Alt+number
+            // stopped selecting after a reload) had nothing to check this
+            // against.
+            int withMembers = 0;
+            foreach (var g in groups)
+            {
+                if (g.members.Count > 0)
+                {
+                    withMembers++;
+                }
+            }
+            Logger.Info("FinalizeInit: load complete, " + withMembers + " of " + GroupCount + " hotgroups hold members.");
         }
     }
 }

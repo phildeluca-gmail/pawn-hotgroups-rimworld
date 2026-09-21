@@ -36,9 +36,12 @@ namespace PawnHotgroups.Core
             }
         }
 
+        // Null-safe on its own, not just because every caller happens to
+        // prune first - 2026-09-20, the same defect this property could
+        // have hidden a second way.
         public int Count
         {
-            get { return members.Count; }
+            get { return members == null ? 0 : members.Count; }
         }
 
         // Architecture 2.2 - "anything to which an order can be issued".

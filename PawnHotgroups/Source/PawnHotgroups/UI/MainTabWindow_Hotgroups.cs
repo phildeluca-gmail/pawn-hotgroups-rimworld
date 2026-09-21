@@ -75,7 +75,7 @@ namespace PawnHotgroups.UI
             // a Label clipped to LineHeight simply cut it off mid-sentence.
             // Text.CalcHeight is the game's own measurement for the wrapped
             // height of a string in a given width.
-            const string hint = "Ctrl + number sets a group from your selection. Alt + number adds that group to your selection.";
+            const string hint = "Ctrl + number sets a group from your selection. Alt + number selects it, replacing your selection. Shift + Alt + number adds it instead.";
             float hintHeight = Text.CalcHeight(hint, inRect.width);
             Widgets.Label(new Rect(0f, y, inRect.width, hintHeight), hint);
             y += hintHeight + RowPad;
@@ -110,7 +110,9 @@ namespace PawnHotgroups.UI
             // that have already been drawn this pass
             if (pendingActivate >= 0)
             {
-                mgr.Activate(pendingActivate);
+                // A mouse click, no modifier in play - replace, the same
+                // default as Alt + number with no shift.
+                mgr.Activate(pendingActivate, false);
                 pendingActivate = -1;
             }
         }
